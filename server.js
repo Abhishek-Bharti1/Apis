@@ -11,7 +11,7 @@ app.use(cors())
 const PORT =process.env.PORT || 3000;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect("mongodb://localhost:27017", { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Error connecting to MongoDB:', err));
 // Create a schema for tasks
@@ -106,32 +106,38 @@ app.delete("/api/tasks/:taskId", async (req, res) => {
     }
   });
 
+
   app.get("/api/tasks/download-pdf", async (req, res) => {
-    try {
-      const tasks = await Task.find().lean(); 
+      try {
+          const tasks = await Task.find().lean(); 
   
-      const doc = new PDFDocument();
-      const fileName = "tasks.pdf";
+          const doc = new PDFDocument();
+          const fileName = "tasks.pdf";
   
-      res.setHeader('Content-disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-type', 'application/pdf');
+          // Set HTTP headers for response
+          res.setHeader('Content-disposition', `attachment; filename="${fileName}"`);
+          res.setHeader('Content-type', 'application/pdf');
   
+          // Pipe the PDF document to the response stream
+          doc.pipe(res);
   
-      doc.fontSize(20).text('Tasks List', { align: 'center' }).moveDown();
+          // Write content to the PDF
+          doc.fontSize(20).text('Tasks List', { align: 'center' }).moveDown();
   
-      tasks.forEach(task => {
-        doc.fontSize(14).text(`Name: ${task.name}`, { continued: true });
-        doc.fontSize(12).text(`Status: ${task.status}`).moveDown();
-      });
+          tasks.forEach(task => {
+              doc.fontSize(14).text(`Name: ${task.name}`, { continued: true });
+              doc.fontSize(12).text(`Status: ${task.status}`).moveDown();
+          });
   
-      doc.end(); 
+          // End the PDF document
+          doc.end(); 
   
-  
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+      } catch (error) {
+          console.error("Error generating PDF:", error);
+          res.status(500).json({ message: "Internal server error" });
+      }
   });
+  
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
